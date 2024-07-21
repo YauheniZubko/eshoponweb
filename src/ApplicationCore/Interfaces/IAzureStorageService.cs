@@ -1,6 +1,6 @@
 ﻿using System.Threading.Tasks;
 namespace Microsoft.eShopWeb.ApplicationCore.Interfaces;
-public interface IStorageService
+public interface IAzureStorageService
 {
-    Task AddToOrderItemsReserverStorage(int basketId);
+    Task AddOrder(int basketId);
 }

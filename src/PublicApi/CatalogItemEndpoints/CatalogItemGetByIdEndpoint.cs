@@ -1,4 +1,6 @@
-﻿using System.Threading.Tasks;
+﻿using System;
+using System.Collections.Generic;
+using System.Threading.Tasks;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Routing;
@@ -29,6 +31,35 @@ public class CatalogItemGetByIdEndpoint : IEndpoint<IResult, GetByIdCatalogItemR
             })
             .Produces<GetByIdCatalogItemResponse>()
             .WithTags("CatalogItemEndpoints");
+
+        app.MapGet("api/primeCounts/{count}",
+            (int count) =>
+            {
+                List<int> primes = new List<int>();
+                int num = 0;
+                var isPrime = (int num) =>
+                {
+                    if (num <= 1) return false;
+                    for (int i = 2; i <= Math.Sqrt(num); i++)
+                    {
+                        if (num % i == 0) return false;
+                    }
+                    return true;
+                };
+                while (count > 0)
+                {
+                    if (isPrime(num))
+                    {
+                        count--;
+                        primes.Add(num);
+                    }
+                    num++;
+                }
+                return primes.ToArray();
+            }
+            )
+            .Produces<int[]>()
+            .WithTags("PrimeCountEndpoints");
     }
 
     public async Task<IResult> HandleAsync(GetByIdCatalogItemRequest request, IRepository<CatalogItem> itemRepository)

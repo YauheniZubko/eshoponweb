@@ -69,15 +69,18 @@ builder.Services.AddAuthentication(config =>
     };
 });
 
+
+builder.Services.AddApplicationInsightsTelemetry();
+
 const string CORS_POLICY = "CorsPolicy";
 builder.Services.AddCors(options =>
 {
     options.AddPolicy(name: CORS_POLICY,
         corsPolicyBuilder =>
         {
-            corsPolicyBuilder.WithOrigins(baseUrlConfig!.WebBase.Replace("host.docker.internal", "localhost").TrimEnd('/'));
-            corsPolicyBuilder.AllowAnyMethod();
-            corsPolicyBuilder.AllowAnyHeader();
+            corsPolicyBuilder.WithOrigins(builder.Configuration["baseUrls:webBase"].TrimEnd('/'))
+                .AllowAnyHeader()
+                .AllowAnyMethod();
         });
 });
 
@@ -152,7 +155,7 @@ if (app.Environment.IsDevelopment())
     app.UseDeveloperExceptionPage();
 }
 
-app.UseMiddleware<ExceptionMiddleware>();
+//app.UseMiddleware<ExceptionMiddleware>();
 
 app.UseHttpsRedirection();
 
@@ -174,7 +177,6 @@ app.UseSwaggerUI(c =>
 
 app.MapControllers();
 app.MapEndpoints();
-
 app.Logger.LogInformation("LAUNCHING PublicApi");
 app.Run();
 

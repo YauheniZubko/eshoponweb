@@ -47,7 +47,7 @@ public class OrderService : IOrderService
         }).ToList();
 
         var order = new Order(basket.BuyerId, shippingAddress, items);
-
+        
         await _orderRepository.AddAsync(order);
     }
 }

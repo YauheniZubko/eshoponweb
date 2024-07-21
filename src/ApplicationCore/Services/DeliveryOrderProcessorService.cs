@@ -7,62 +7,55 @@ using System.Threading.Tasks;
 using Ardalis.GuardClauses;
 using Microsoft.eShopWeb.ApplicationCore.Entities;
 using Microsoft.eShopWeb.ApplicationCore.Entities.BasketAggregate;
-using Microsoft.eShopWeb.ApplicationCore.Entities.OrderAggregate;
-using Microsoft.eShopWeb.ApplicationCore.Entities.StorageEntities;
 using Microsoft.eShopWeb.ApplicationCore.Interfaces;
 using Microsoft.eShopWeb.ApplicationCore.Specifications;
 using Microsoft.Extensions.Configuration;
+using Microsoft.eShopWeb.ApplicationCore.Entities.OrderAggregate;
 
 namespace Microsoft.eShopWeb.ApplicationCore.Services;
-public class StorageService: IStorageService
+public class DeliveryOrderProcessorService : ICosmosDbService
 {
-    private readonly IRepository<Order> _orderRepository;
-    private readonly IUriComposer _uriComposer;
     private readonly IRepository<Basket> _basketRepository;
-    private readonly IRepository<CatalogItem> _itemRepository;
     private readonly IConfiguration _configuration;
     private readonly HttpClient _httpClient;
 
-    public StorageService(HttpClient httpClient, 
+    public DeliveryOrderProcessorService(HttpClient httpClient,
         IRepository<Basket> basketRepository,
         IRepository<CatalogItem> itemRepository,
-        IRepository<Order> orderRepository,
         IUriComposer uriComposer,
         IConfiguration configuration)
     {
         _httpClient = httpClient;
-        _orderRepository = orderRepository;
-        _uriComposer = uriComposer;
         _basketRepository = basketRepository;
-        _itemRepository = itemRepository;
         _configuration = configuration;
     }
 
-    public async Task AddToOrderItemsReserverStorage(int basketId)
+    public async Task AddOrder(int basketId, Address address)
     {
         var basketSpec = new BasketWithItemsSpecification(basketId);
         var basket = await _basketRepository.FirstOrDefaultAsync(basketSpec);
 
         Guard.Against.Null(basket, nameof(basket));
         Guard.Against.EmptyBasketOnCheckout(basket.Items);
-       
+
         var orderedItems = basket.Items
-            .Select(item => new StorageOrderItemInfo
+            .Select(item => new Entities.CosmosDb.OrderItem
             {
                 CatalogItemId = item.Id,
                 Quantity = item.Quantity
             }).ToArray();
 
-        var storageOrder = new StorageOrder()
+        var storageOrder = new Entities.CosmosDb.Order()
         {
-            BuyerId = basket.BuyerId,
-            OrderedItems = orderedItems
+            Address = address,
+            OrderedItems = orderedItems,
+            Price = basket.Items.Sum(item => item.Quantity * item.UnitPrice)
         };
 
-        string storageUrl = _configuration["OrderItemsReserverUrl"] ?? "";
-        string storageKey = _configuration["OrderItemsReserverKey"] ?? "";
+        string storageUrl = _configuration["DeliveryOrderProcessor:Url"] ?? "";
+        string storageKey = _configuration["DeliveryOrderProcessor:Key"] ?? "";
 
-        if(string.IsNullOrWhiteSpace(storageUrl) || string.IsNullOrWhiteSpace(storageKey))
+        if (string.IsNullOrWhiteSpace(storageUrl) || string.IsNullOrWhiteSpace(storageKey))
         {
             throw new ArgumentException("Configuration is not set up");
         }
